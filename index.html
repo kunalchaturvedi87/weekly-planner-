@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Weekly Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1220; --panel:#0f1b26; --muted:#9db0bf; --accent:#6fe6c8;
+    --ok:#22c55e; --danger:#ff6b6b; --card:#0b1520;
+    --radius:12px; --gap:12px; --maxw:1100px;
+    --glass: rgba(255,255,255,0.02);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; background:linear-gradient(180deg,#07121a,#061019);
+    color:#e6eef3; font-family:Inter,system-ui,Arial; padding:20px; -webkit-font-smoothing:antialiased;
+    display:flex; justify-content:center;
+  }
+  .wrap{width:100%;max-width:var(--maxw)}
+  header{ text-align:center; margin-bottom:12px; }
+  .title{ font-family:Fredoka One,system-ui; font-size:2.1rem; margin:0; letter-spacing:.6px }
+  .subtitle{ color:var(--muted); margin-top:6px; font-weight:500 }
+
+  main{ display:grid; grid-template-columns: 1fr 360px; gap:18px; }
+  @media(max-width:980px){ main{grid-template-columns:1fr} .rightCol{order:2} }
+
+  .panel{ background:linear-gradient(180deg,var(--panel), rgba(255,255,255,0.01)); padding:14px; border-radius:var(--radius);
+          border:1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+
+  .planner{ display:grid; grid-template-columns: repeat(7,1fr); gap:12px; margin-top:12px; }
+  @media(max-width:920px){ .planner{ grid-template-columns: repeat(2,1fr) } }
+  @media(max-width:520px){ .planner{ grid-template-columns: repeat(1,1fr) } }
+
+  .day{ background:var(--card); padding:10px; border-radius:10px; min-height:160px; display:flex; flex-direction:column; border:1px solid var(--glass) }
+  .day h4{ margin:0 0 8px 0; font-size:1rem }
+  .tasks{ flex:1; overflow:auto; display:flex; flex-direction:column; gap:8px; padding-right:6px }
+
+  .task{ display:flex; gap:10px; align-items:center; padding:8px; border-radius:8px; background:rgba(255,255,255,0.012); border:1px solid rgba(255,255,255,0.02) }
+  .task.completed{ opacity:0.6; text-decoration:line-through }
+  .tick{ width:28px; height:28px; border-radius:8px; display:grid; place-items:center; cursor:pointer; border:1px solid rgba(255,255,255,0.03) }
+  .meta{ flex:1 }
+  .titleTxt{ font-weight:700; }
+  .timeTxt{ color:var(--muted); font-size:.9rem; margin-top:4px }
+  .acts{ display:flex; gap:6px }
+
+  .add{ margin-top:10px; display:flex; gap:8px; align-items:center }
+  input[type="text"], input[type="time"]{ background:transparent; border:1px solid rgba(255,255,255,0.03); padding:8px; border-radius:8px; color:inherit }
+  input[type="text"]{ flex:1 }
+
+  .btn{ padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit; font-weight:700; cursor:pointer }
+  .btn.primary{ background:linear-gradient(90deg,#7be9c7,#6fe6ff); color:#062; border:0 }
+
+  .rightCol{ display:flex; flex-direction:column; gap:12px }
+  .tomorrow{ display:flex; flex-direction:column; gap:8px }
+  .upcoming{ display:flex; flex-direction:column; gap:8px; margin-top:8px }
+  .upItem{ padding:8px; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02); display:flex; justify-content:space-between; gap:8px; color:var(--muted) }
+
+  .footer{ text-align:center; margin-top:14px; color:var(--muted); font-size:.92rem }
+
+  .toast{ position:fixed; right:18px; bottom:18px; background:linear-gradient(90deg,#7be9c7,#6fe6ff); color:#012; padding:12px 14px; border-radius:10px; display:none; box-shadow:0 12px 30px rgba(0,0,0,0.5) }
+
+  /* small niceties */
+  .muted{ color:var(--muted); font-size:.92rem }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1 class="title">Weekly Planner</h1>
+      <div class="subtitle muted">Clean schedule — start & finish times — reminders</div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="muted">Add tasks to any weekday. Use Start & Finish times for clarity — reminders use the <strong>Start time</strong>.</div>
+
+        <div id="planner" class="planner"></div>
+
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+          <input id="quickText" type="text" placeholder="Quick add for tomorrow..." />
+          <input id="quickStart" type="time" title="Start time" />
+          <input id="quickEnd" type="time" title="End time" />
+          <button id="quickAdd" class="btn primary">Add</button>
+        </div>
+
+        <div class="footer">Saved locally • Notifications require browser permission & HTTPS / localhost</div>
+      </section>
+
+      <aside class="rightCol">
+        <div class="panel tomorrow">
+          <h3 style="margin:0">Tomorrow</h3>
+          <div class="muted">Quick view + add to tomorrow</div>
+
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="tomText" type="text" placeholder="Task for tomorrow" />
+            <input id="tomStart" type="time" />
+            <input id="tomEnd" type="time" />
+            <button id="tomAdd" class="btn primary">Add</button>
+          </div>
+
+          <div style="margin-top:12px">
+            <h4 style="margin:0 0 6px 0">Tomorrow tasks</h4>
+            <div id="tomList" class="upcoming"></div>
+          </div>
+        </div>
+
+        <div class="panel upcoming" style="padding:12px">
+          <h4 style="margin:0 0 8px 0">Next 24 hours</h4>
+          <div id="upcoming" class="upcoming muted"></div>
+        </div>
+
+        <div class="panel" style="text-align:center">
+          <button id="notifBtn" class="btn primary">Enable reminders</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* Single-file Weekly Planner (start + finish time) */
+
+/* Data model:
+ tasks = {0: [task...], ..., 6: [...]}
+ task = { id, text, start:'HH:MM'|'', end:'HH:MM'|'', completed:false, createdAt, dueAt(ms), lastNotified(ms) }
+*/
+
+const STORAGE = 'weekly-planner-simple-v1';
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const CHECK_INTERVAL = 60 * 1000; // 60s
+
+let tasks = loadTasks() || initEmpty();
+let notifAllowed = (window.Notification && Notification.permission === 'granted');
+
+const plannerEl = document.getElementById('planner');
+const toastEl = document.getElementById('toast');
+const upcomingEl = document.getElementById('upcoming');
+const tomListEl = document.getElementById('tomList');
+
+const quickText = document.getElementById('quickText');
+const quickStart = document.getElementById('quickStart');
+const quickEnd = document.getElementById('quickEnd');
+const quickAdd = document.getElementById('quickAdd');
+
+const tomText = document.getElementById('tomText');
+const tomStart = document.getElementById('tomStart');
+const tomEnd = document.getElementById('tomEnd');
+const tomAdd = document.getElementById('tomAdd');
+
+const notifBtn = document.getElementById('notifBtn');
+
+/* Utility */
+function initEmpty(){ const o={}; for(let i=0;i<7;i++) o[i]=[]; return o; }
+function save(){ try{ localStorage.setItem(STORAGE, JSON.stringify(tasks)); }catch(e){ showToast('Save failed — localStorage issue'); } }
+function loadTasks(){ try{ const r = localStorage.getItem(STORAGE); return r ? JSON.parse(r) : null; }catch(e){ return null; } }
+function id(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;", '"':"&quot;","'":"&#39;" })[c]); }
+function nowMs(){ return Date.now(); }
+function showToast(msg, t=3500){ toastEl.textContent = msg; toastEl.style.display='block'; clearTimeout(toastEl._t); toastEl._t = setTimeout(()=> toastEl.style.display='none', t); }
+
+/* Render planner (7 columns) */
+function render(){
+  plannerEl.innerHTML = '';
+  for(let d=0; d<7; d++){
+    const dayCol = document.createElement('div'); dayCol.className='day'; dayCol.dataset.day=d;
+    const h = document.createElement('h4'); h.textContent = DAYS[d];
+    dayCol.appendChild(h);
+
+    const tasksWrap = document.createElement('div'); tasksWrap.className='tasks';
+    // sort tasks by start time (present first) then createdAt
+    const arr = tasks[d].slice().sort((a,b)=>{
+      if(a.start && b.start) return a.start.localeCompare(b.start);
+      if(a.start) return -1; if(b.start) return 1;
+      return a.createdAt - b.createdAt;
+    });
+
+    arr.forEach(t=>{
+      const tdiv = document.createElement('div'); tdiv.className='task'; if(t.completed) tdiv.classList.add('completed'); tdiv.dataset.id=t.id;
+      const tick = document.createElement('div'); tick.className='tick'; tick.title = t.completed ? 'Mark undone' : 'Mark done'; tick.innerHTML = t.completed ? '✓' : '';
+      tick.onclick = ()=> toggleComplete(d, t.id);
+
+      const meta = document.createElement('div'); meta.className='meta';
+      const title = document.createElement('div'); title.className='titleTxt'; title.innerHTML = escapeHtml(t.text);
+      const time = document.createElement('div'); time.className='timeTxt';
+      if(t.start || t.end) time.textContent = `${t.start || '--:--'} → ${t.end || '--:--'}`;
+      meta.appendChild(title); meta.appendChild(time);
+
+      const acts = document.createElement('div'); acts.className='acts';
+      const edit = document.createElement('button'); edit.className='btn'; edit.textContent='Edit'; edit.onclick=()=> editTask(d,t.id);
+      const del = document.createElement('button'); del.className='btn'; del.textContent='Delete'; del.onclick=()=> { if(confirm('Delete task?')) removeTask(d,t.id); };
+      acts.appendChild(edit); acts.appendChild(del);
+
+      tdiv.appendChild(tick); tdiv.appendChild(meta); tdiv.appendChild(acts);
+      tasksWrap.appendChild(tdiv);
+    });
+
+    dayCol.appendChild(tasksWrap);
+
+    // add row with start & finish
+    const add = document.createElement('div'); add.className='add';
+    const textIn = document.createElement('input'); textIn.type='text'; textIn.placeholder='Task';
+    const startIn = document.createElement('input'); startIn.type='time';
+    const endIn = document.createElement('input'); endIn.type='time';
+    const addBtn = document.createElement('button'); addBtn.className='btn primary'; addBtn.textContent='Add';
+    addBtn.onclick = ()=>{
+      const txt = textIn.value.trim();
+      if(!txt) return showToast('Enter task text');
+      addTask(d, txt, startIn.value || '', endIn.value || '');
+      textIn.value=''; startIn.value=''; endIn.value='';
+    };
+    add.appendChild(textIn); add.appendChild(startIn); add.appendChild(endIn); add.appendChild(addBtn);
+    dayCol.appendChild(add);
+
+    plannerEl.appendChild(dayCol);
+  }
+  renderTomorrow();
+  renderUpcoming();
+  save();
+}
+
+/* CRUD */
+function addTask(day, text, start, end){
+  const t = { id: id(), text, start: start||'', end: end||'', completed:false, createdAt: nowMs(), lastNotified:0 };
+  if(t.start) t.dueAt = computeNextDue(day, t.start);
+  tasks[day].push(t);
+  render();
+}
+function removeTask(day, tid){ tasks[day] = tasks[day].filter(x=>x.id!==tid); render(); }
+function toggleComplete(day, tid){ const t = tasks[day].find(x=>x.id===tid); if(!t) return; t.completed = !t.completed; render(); }
+function editTask(day, tid){
+  const t = tasks[day].find(x=>x.id===tid); if(!t) return;
+  const nt = prompt('Edit text:', t.text); if(nt===null) return;
+  const ns = prompt('Start time (HH:MM) or blank:', t.start || ''); if(ns===null) return;
+  const ne = prompt('End time (HH:MM) or blank:', t.end || ''); if(ne===null) return;
+  t.text = nt.trim() || t.text; t.start = ns.trim(); t.end = ne.trim();
+  t.dueAt = t.start ? computeNextDue(day, t.start) : undefined;
+  t.lastNotified = 0;
+  render();
+}
+
+/* Quick add (tomorrow) */
+quickAdd.onclick = ()=> {
+  const txt = quickText.value.trim(); if(!txt) return showToast('Enter quick task');
+  const start = quickStart.value || ''; const end = quickEnd.value || '';
+  const tomorrow = (new Date()).getDay() + 1; const day = tomorrow % 7;
+  addTask(day, txt, start, end);
+  quickText.value=''; quickStart.value=''; quickEnd.value='';
+};
+
+/* Tomorrow add */
+tomAdd.onclick = ()=> {
+  const txt = tomText.value.trim(); if(!txt) return showToast('Enter task');
+  const start = tomStart.value || ''; const end = tomEnd.value || '';
+  const tomorrow = (new Date()).getDay() + 1; const day = tomorrow % 7;
+  addTask(day, txt, start, end);
+  tomText.value=''; tomStart.value=''; tomEnd.value='';
+};
+
+/* Tomorrow list render */
+function renderTomorrow(){
+  tomListEl.innerHTML = '';
+  const tomorrow = (new Date()).getDay() + 1; const day = tomorrow % 7;
+  const arr = tasks[day] || [];
+  if(arr.length === 0) tomListEl.innerHTML = '<div class="muted">No tasks for tomorrow</div>';
+  else {
+    arr.slice().sort((a,b)=> (a.start || '') > (b.start || '') ? 1 : -1).forEach(t=>{
+      const el = document.createElement('div'); el.className='upItem';
+      el.innerHTML = `<div style="max-width:180px">${escapeHtml(t.text)}</div><div class="muted">${t.start? t.start : '--:--'} → ${t.end? t.end : '--:--'}</div>`;
+      tomListEl.appendChild(el);
+    });
+  }
+}
+
+/* Upcoming next 24h */
+function renderUpcoming(){
+  upcomingEl.innerHTML = '';
+  const now = nowMs();
+  const soon = [];
+  for(let d=0; d<7; d++){
+    (tasks[d]||[]).forEach(t=>{
+      if(!t.start) return;
+      const due = t.dueAt || computeNextDue(d, t.start);
+      if(due > now && due - now <= 24*60*60*1000) soon.push({due,d,t});
+    });
+  }
+  if(soon.length===0) upcomingEl.innerHTML = '<div class="muted">No reminders in next 24 hours</div>';
+  else {
+    soon.sort((a,b)=>a.due - b.due).slice(0,6).forEach(s=>{
+      const el = document.createElement('div'); el.className='upItem';
+      const dt = new Date(s.due);
+      el.innerHTML = `<div>${DAYS[s.d].slice(0,3)} ${dt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div><div style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(s.t.text)}</div>`;
+      upcomingEl.appendChild(el);
+    });
+  }
+}
+
+/* compute next due ms for given weekday and HH:MM */
+function computeNextDue(dayIndex, hhmm){
+  if(!hhmm) return null;
+  const [hh,mm] = hhmm.split(':').map(n=>Number(n));
+  const now = new Date();
+  const cand = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh||0, mm||0, 0, 0);
+  const today = now.getDay();
+  let delta = (dayIndex - today + 7) % 7;
+  if(delta === 0 && cand.getTime() <= now.getTime()) delta = 7;
+  cand.setDate(cand.getDate() + delta);
+  return cand.getTime();
+}
+
+/* reminders: check periodically and on focus */
+function checkDue(){
+  const now = nowMs();
+  let changed = false;
+  for(let d=0; d<7; d++){
+    (tasks[d]||[]).forEach(t=>{
+      if(!t.start) return;
+      if(!t.dueAt) t.dueAt = computeNextDue(d, t.start);
+      if(t.dueAt && t.dueAt <= now && (!t.lastNotified || now - t.lastNotified > 30*1000)){
+        // fire reminder (title = weekday + start)
+        const title = `${DAYS[d]} ${t.start}`;
+        const body = t.text;
+        fireReminder(title, body);
+        t.lastNotified = now;
+        // schedule next week
+        t.dueAt = t.dueAt + 7*24*60*60*1000;
+        changed = true;
+      }
+    });
+  }
+  if(changed) { saveTasks(); render(); }
+}
+
+/* notification + in-page toast */
+function fireReminder(title, body){
+  showToast(`${title}: ${body}`, 8000);
+  if(notifAllowed){
+    try{ const n = new Notification(title, { body }); n.onclick = ()=> window.focus(); }catch(e){}
+  }
+}
+
+/* save/load wrapper */
+function saveTasks(){ try{ localStorage.setItem(STORAGE, JSON.stringify(tasks)); }catch(e){ showToast('Save failed'); } }
+window.addEventListener('focus', ()=>{ checkDue(); renderUpcoming(); renderTomorrow(); });
+
+/* quick notification permission */
+notifBtn.addEventListener('click', async ()=>{
+  if(!('Notification' in window)){ showToast('Notifications unsupported'); return; }
+  if(Notification.permission === 'granted'){ notifAllowed = true; showToast('Notifications enabled'); return; }
+  const p = await Notification.requestPermission();
+  notifAllowed = (p === 'granted');
+  showToast(notifAllowed ? 'Notifications enabled' : 'Notifications denied');
+});
+
+/* helper: save with debounce */
+let saveTimer = null;
+function saveDebounced(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{ try{ localStorage.setItem(STORAGE, JSON.stringify(tasks)); }catch(e){ showToast('Save error'); } }, 300);
+}
+
+/* wrap save call */
+function saveTasksAndRender(){ saveDebounced(); render(); }
+
+/* CRUD wrappers that use saveDebounced */
+function addTask(day, text, start, end){
+  const t = { id: id(), text, start:start||'', end:end||'', completed:false, createdAt: nowMs(), lastNotified:0 };
+  if(t.start) t.dueAt = computeNextDue(day, t.start);
+  tasks[day].push(t); saveTasksAndRender();
+}
+function removeTask(day, tid){ tasks[day] = tasks[day].filter(x=>x.id !== tid); saveTasksAndRender(); }
+function toggleComplete(day, tid){ const t = tasks[day].find(x=>x.id===tid); if(!t) return; t.completed = !t.completed; saveTasksAndRender(); }
+function editTask(day, tid){
+  const t = tasks[day].find(x=>x.id===tid); if(!t) return;
+  const newText = prompt('Edit task text:', t.text); if(newText === null) return;
+  const newStart = prompt('Start time (HH:MM) or blank:', t.start || ''); if(newStart === null) return;
+  const newEnd = prompt('End time (HH:MM) or blank:', t.end || ''); if(newEnd === null) return;
+  t.text = newText.trim() || t.text; t.start = newStart.trim(); t.end = newEnd.trim();
+  t.dueAt = t.start ? computeNextDue(Number(prompt('Which weekday index? 0-Sun .. 6-Sat', '0')), t.start) : t.dueAt;
+  t.lastNotified = 0;
+  saveTasksAndRender();
+}
+
+/* remove old dueAt init */
+(function initDueAt(){ let changed=false; for(let d=0; d<7; d++){ tasks[d].forEach(t=>{ if(t.start && !t.dueAt){ t.dueAt = computeNextDue(d, t.start); changed=true; } }); } if(changed) saveTasksAndRender(); })();
+
+/* periodic check */
+setInterval(checkDue, CHECK_INTERVAL);
+checkDue();
+
+/* initial render */
+render();
+
+/* expose save for console debug */
+window._planner = { tasks, save: ()=>saveTasksAndRender() };
+
+/* helper toast */
+function showToast(msg, t=3000){ toastEl.textContent = msg; toastEl.style.display='block'; clearTimeout(toastEl._t); toastEl._t = setTimeout(()=> toastEl.style.display='none', t); }
+
+/* small utility: id generator reused here */
+function id(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+</script>
+</body>
+</html>
