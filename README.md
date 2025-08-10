@@ -15,12 +15,11 @@ It nags me when I forget things, and honestly, I kind of love it.
 1. Open the link ↑.  
 2. Add your stuff.  
 3. Let the browser yell at you when it’s time.  
-4. Pretend you’ve had your life together all along. 😏
+4. Pretend you’ve had your life together all along. 
 
 ## Tech Stuff (if you’re that kind of person)
 - **HTML** + **CSS** + **Vanilla JS**  
-- Saves tasks in your browser 🛟 — survives refreshes and bad life choices.  
+- Saves tasks in your browser  survives refreshes and bad life 
 
----
 
 MIT Licensed — fork it, roast it, upgrade it… just don’t try to sell it back to me as a “Pro Productivity Tool™” 🙄
